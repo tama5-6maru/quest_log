@@ -1,0 +1,11 @@
+{
+  "name": "QUEST LOG — ぼうけんのきろく",
+  "short_name": "QUEST LOG",
+  "lang": "ja",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#111920",
+  "theme_color": "#17212b",
+  "icons": [{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
+
