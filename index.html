@@ -86,6 +86,25 @@
     </main>
     <footer><span>✦</span> YOUR OWN PACE, YOUR OWN QUEST <span>✦</span></footer>
   </div>
+  <div id="power-modal" class="power-modal" hidden>
+    <section class="power-dialog" role="dialog" aria-modal="true" aria-labelledby="power-title" aria-describedby="power-message">
+      <div id="power-scene" class="power-scene" data-art="hp" aria-hidden="true">
+        <span class="scene-spark spark-a">✦</span><span class="scene-spark spark-b">✧</span>
+        <span class="scene-monster">👾</span><span class="scene-hero"><i></i><b></b><em></em></span>
+        <span id="scene-weapon" class="scene-weapon">💪</span><span class="scene-impact">✦</span>
+      </div>
+      <p class="eyebrow">QUEST COMPLETE?</p>
+      <h2 id="power-title">パワーアップ！</h2>
+      <p id="power-message" class="power-message"></p>
+      <p id="power-action" class="power-action"></p>
+      <div id="power-reward" class="power-reward">+0 EXP</div>
+      <p class="power-hint">OKを押すと記録されます</p>
+      <div class="power-buttons">
+        <button id="cancel-action" class="cancel-action" type="button">取り消す</button>
+        <button id="confirm-action" class="confirm-action" type="button">OK</button>
+      </div>
+    </section>
+  </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="app.js"></script>
 </body>
