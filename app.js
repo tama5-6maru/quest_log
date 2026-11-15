@@ -7,7 +7,7 @@ const STATUSES = [
   { id:'speed', name:'すばやさ', icon:'👟', color:'#8bd4a6', actions:[['ご飯を我慢した',3],['体を動かした',3],['エレベーターより階段を選んだ',2],['食事を記録した',2]] },
 ];
 const KEY='quest-log-save-v1';
-let state=loadState(), activeStat=null, toastTimer;
+let state=loadState(), activeStat=null, pendingAction=null, toastTimer;
 function uid(){return crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random().toString(16).slice(2)}`}
 function freshState(){return {progressionVersion:3,name:'ぼうけん者',stats:Object.fromEntries(STATUSES.map(s=>[s.id,{exp:0}])),actions:Object.fromEntries(STATUSES.map(s=>[s.id,s.actions.map(([name,exp])=>({id:uid(),name,exp}))])),logs:[],adjustments:[]}}
 function loadState(){
@@ -63,7 +63,27 @@ function renderDetail(){
  list.querySelectorAll('[data-delete]').forEach(el=>el.addEventListener('click',()=>deleteAction(el.dataset.delete)));
  document.getElementById('add-action-form').reset();document.getElementById('new-action-exp').value=3;
 }
-function completeAction(id){const action=state.actions[activeStat.id].find(a=>a.id===id);if(!action)return;const before=levelInfo(state.stats[activeStat.id].exp).level;state.stats[activeStat.id].exp+=action.exp;state.logs.push({id:uid(),status:activeStat.id,action:action.name,exp:action.exp,at:new Date().toISOString()});save();renderDetail();renderHome();const after=levelInfo(state.stats[activeStat.id].exp).level;showToast(after>before?`LEVEL UP! ${activeStat.name} Lv.${after}`:`+${action.exp} EXP GET!`)}
+function completeAction(id){
+ const status=activeStat,action=state.actions[status.id].find(a=>a.id===id);if(!action)return;
+ pendingAction={statusId:status.id,actionId:id,trigger:document.activeElement};
+ const modal=document.getElementById('power-modal'),scene=document.getElementById('power-scene');
+ const weapons={hp:'💪',attack:'⚔️',defense:'🛡️',spattack:'🪄',spdefense:'🔮',speed:'👟'};
+ scene.dataset.art=status.id;document.getElementById('scene-weapon').textContent=weapons[status.id]||'✦';
+ document.getElementById('power-message').textContent=`${status.name}の経験値を ${action.exp} 取得します。`;
+ document.getElementById('power-action').textContent=action.name;
+ document.getElementById('power-reward').textContent=`+${action.exp} EXP`;
+ modal.hidden=false;document.body.classList.add('modal-open');document.getElementById('confirm-action').focus();
+}
+function closePowerModal(restoreFocus=true){
+ const trigger=pendingAction?.trigger;document.getElementById('power-modal').hidden=true;document.body.classList.remove('modal-open');pendingAction=null;
+ if(restoreFocus&&trigger?.isConnected)trigger.focus();
+}
+function cancelAction(){if(!pendingAction)return;closePowerModal(true)}
+function confirmAction(){
+ if(!pendingAction)return;const {statusId,actionId}=pendingAction,status=STATUSES.find(s=>s.id===statusId),action=state.actions[statusId].find(a=>a.id===actionId);if(!status||!action){cancelAction();return}
+ const before=levelInfo(state.stats[statusId].exp).level;state.stats[statusId].exp+=action.exp;state.logs.push({id:uid(),status:statusId,action:action.name,exp:action.exp,at:new Date().toISOString()});save();renderDetail();renderHome();closePowerModal(false);
+ const after=levelInfo(state.stats[statusId].exp).level,button=document.querySelector(`[data-complete="${CSS.escape(actionId)}"]`);if(button)button.focus();if(after>before)showToast(`LEVEL UP! ${status.name} Lv.${after}`);
+}
 function editAction(id){const row=document.querySelector(`[data-action-id="${CSS.escape(id)}"]`),action=state.actions[activeStat.id].find(a=>a.id===id);if(!row||!action)return;row.innerHTML=`<form class="inline-edit"><label>行動名<input name="name" maxlength="60" required value="${safe(action.name)}"></label><label>EXP<input name="exp" type="number" min="1" max="9999" required value="${action.exp}"></label><div class="form-buttons"><button class="primary-button" type="submit">保存</button><button type="button" class="cancel-button">取消</button></div></form>`;const form=row.querySelector('form');form.addEventListener('submit',e=>{e.preventDefault();const data=new FormData(form),name=String(data.get('name')).trim(),exp=Number(data.get('exp'));if(!name||!Number.isInteger(exp)||exp<1)return;action.name=name;action.exp=exp;save();renderDetail()});form.querySelector('.cancel-button').addEventListener('click',renderDetail)}
 function deleteAction(id){const action=state.actions[activeStat.id].find(a=>a.id===id);if(!action)return;if(!confirm(`「${action.name}」を削除しますか？`))return;state.actions[activeStat.id]=state.actions[activeStat.id].filter(a=>a.id!==id);save();renderDetail();showToast('行動を削除しました')}
 function renderLogs(){
@@ -83,6 +103,10 @@ document.getElementById('open-settings').addEventListener('click',()=>{renderSet
 document.querySelectorAll('[data-home]').forEach(el=>el.addEventListener('click',()=>showScreen('home')));
 document.getElementById('name-form').addEventListener('submit',e=>{e.preventDefault();const name=document.getElementById('name-input').value.trim();if(!name)return;state.name=name;save();renderHome();showToast('名前を変更しました')});
 document.getElementById('add-action-form').addEventListener('submit',e=>{e.preventDefault();const name=document.getElementById('new-action-name').value.trim(),exp=Number(document.getElementById('new-action-exp').value);if(!name||!Number.isInteger(exp)||exp<1)return;state.actions[activeStat.id].push({id:uid(),name,exp});save();renderDetail();showToast('新しい行動を追加しました')});
+document.getElementById('confirm-action').addEventListener('click',confirmAction);
+document.getElementById('cancel-action').addEventListener('click',cancelAction);
+document.getElementById('power-modal').addEventListener('click',e=>{if(e.target.id==='power-modal')cancelAction()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.getElementById('power-modal').hidden)cancelAction()});
 ['log-from','log-to','log-status'].forEach(id=>document.getElementById(id).addEventListener('change',renderLogs));
 document.querySelector('[data-overall]').addEventListener('click',()=>{const panel=document.getElementById('growth-panel');panel.open=!panel.open;panel.scrollIntoView({behavior:'smooth',block:'center'})});
 renderHome();
